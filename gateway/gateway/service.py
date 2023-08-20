@@ -10,6 +10,7 @@ from gateway.entrypoints import http
 from gateway.exceptions import OrderNotFound, ProductNotFound
 from gateway.schemas import CreateOrderSchema, GetOrderSchema, ProductSchema
 
+import logging
 
 class GatewayService(object):
     """
@@ -93,14 +94,17 @@ class GatewayService(object):
         # raise``OrderNotFound``
         
         order = self.orders_rpc.get_order(order_id)
-        
+
         # get the configured image root
         image_root = config['PRODUCT_IMAGE_ROOT']
 
         # Enhance order details with product and image details.
         for item in order['order_details']:
             product_id = item['product_id']
-            item['product'] = self.products_rpc.get(product_id)
+            product_map = self.products_rpc.get(product_id)
+            item['product'] = product_map
+            logging.warning(item['product'])
+
             # Construct an image url.
             item['image'] = '{}/{}.jpg'.format(image_root, product_id)
 
@@ -156,7 +160,8 @@ class GatewayService(object):
         # check order product ids are valid
         for item in order_data['order_details']:
             product_id = item['product_id']
-            valid_product_id = self.products_rpc.get(product_id)
+            product_map = self.products_rpc.get(product_id)
+            valid_product_id = product_map
             if item['product_id'] != valid_product_id['id']:
                 raise ProductNotFound(
                     "Product Id {}".format(item['product_id'])
